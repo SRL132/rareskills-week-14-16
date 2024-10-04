@@ -7,6 +7,9 @@ import {DSInvariantTest} from "./utils/DSInvariantTest.sol";
 import {MockERC1155} from "./utils/mocks/MockERC1155.sol";
 
 import {ERC1155TokenReceiver} from "./tokens/ERC1155.sol";
+import "./lib/YulDeployer.sol";
+
+interface ERC1155Yul {}
 
 contract ERC1155Recipient is ERC1155TokenReceiver {
     address public operator;
@@ -122,13 +125,15 @@ contract NonERC1155Recipient {}
 
 contract ERC1155Test is DSTestPlus, ERC1155TokenReceiver {
     MockERC1155 token;
-
+    YulDeployer yulDeployer = new YulDeployer();
+    ERC1155Yul erc1155Yul;
     mapping(address => mapping(uint256 => uint256)) public userMintAmounts;
     mapping(address => mapping(uint256 => uint256))
         public userTransferOrBurnAmounts;
 
     function setUp() public {
         token = new MockERC1155();
+        erc1155Yul = ERC1155Yul(yulDeployer.deployContract("ERC1155"));
     }
 
     function testMintToEOA() public {
