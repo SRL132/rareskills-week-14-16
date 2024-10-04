@@ -1,66 +1,29 @@
-## Foundry
+# Yul developer experience
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+## Repository installation
 
-Foundry consists of:
-
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
-
-https://book.getfoundry.sh/
-
-## Usage
-
-### Build
-
-```shell
-$ forge build
+1. Install Foundry
+```
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
 ```
 
-### Test
+2. Install solidity compiler
+https://docs.soliditylang.org/en/latest/installing-solidity.html#installing-the-solidity-compiler
 
-```shell
-$ forge test
+3. Build Yul contracts and check tests pass
+```
+forge test
 ```
 
-### Format
+## Running tests
 
-```shell
-$ forge fmt
+Run tests (compiles yul then fetch resulting bytecode in test)
+```
+forge test
 ```
 
-### Gas Snapshots
-
-```shell
-$ forge snapshot
+To see the console logs during tests
 ```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+forge test -vvv
 ```
