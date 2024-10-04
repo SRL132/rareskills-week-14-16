@@ -63,11 +63,8 @@ object "ERC1155" {
         }
 
         function getSelector() -> sel {
-            // Load the first 32 bytes of calldata
-            let fullCalldata := calldataload(0)
-
             // Shift right by 224 bits (32 - 4 bytes) to get the first 4 bytes
-            sel := shr(224, fullCalldata)
+            sel := shr(224, calldataload(0))
         }
     }
     }
