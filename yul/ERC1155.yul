@@ -21,14 +21,54 @@ https://eips.ethereum.org/EIPS/eip-1155
 
 object "ERC1155" {
     code {
-      datacopy(0, dataoffset("Runtime"), datasize("Runtime"))
-      return(0, datasize("Runtime"))
+        datacopy(0, dataoffset("Runtime"), datasize("Runtime"))
+        return(0, datasize("Runtime"))
     }
     object "Runtime" {
-      // Return the calldata
-      code {
-        mstore(0x80, calldataload(0))
-        return(0x80, calldatasize())
-      }
+        code {
+            require(iszero(calldatasize()))
+
+            switch getSelector()
+
+            case 0x00fdd58e /* balanceOf(address,uint256) */ {
+                let account := calldataload(4)
+                let id := calldataload(36)
+                let bal := balanceOf(account, id)
+                mstore(0, bal)
+                return(0, 32)
+            }
+
+            default {
+                revert(0,0)
+            }
+        
+
+        /* -------- storage layout ---------- */
+
+        function accountToStorageOffset(account) -> offset {
+            offset := add(0x1000, account)
+        }
+
+        /* -------- storage access ---------- */
+
+        function balanceOf(account, id) -> bal {
+            bal := sload(accountToStorageOffset(account))
+            bal := sload(add(bal, id))
+        }
+
+         /* -------- helper functions ---------- */
+
+         function require(condition) {
+            if iszero(condition) { revert(0, 0) }
+        }
+
+        function getSelector() -> sel {
+            // Load the first 32 bytes of calldata
+            let fullCalldata := calldataload(0)
+
+            // Shift right by 224 bits (32 - 4 bytes) to get the first 4 bytes
+            sel := shr(224, fullCalldata)
+        }
     }
-  }
+    }
+}
