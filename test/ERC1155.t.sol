@@ -9,7 +9,19 @@ import {MockERC1155} from "./utils/mocks/MockERC1155.sol";
 import {ERC1155TokenReceiver} from "./tokens/ERC1155.sol";
 import "./lib/YulDeployer.sol";
 
-interface ERC1155Yul {}
+interface ERC1155Yul {
+    function batchMint(
+        address to,
+        uint256[] calldata ids,
+        uint256[] calldata amounts,
+        bytes calldata data
+    ) external;
+
+    function balanceOf(
+        address account,
+        uint256 id
+    ) external view returns (uint256);
+}
 
 contract ERC1155Recipient is ERC1155TokenReceiver {
     address public operator;
@@ -171,12 +183,15 @@ contract ERC1155Test is DSTestPlus, ERC1155TokenReceiver {
         amounts[4] = 500;
 
         token.batchMint(address(0xBEEF), ids, amounts, "");
+        erc1155Yul.batchMint(address(0xBEEF), ids, amounts, "");
 
         assertEq(token.balanceOf(address(0xBEEF), 1337), 100);
         assertEq(token.balanceOf(address(0xBEEF), 1338), 200);
         assertEq(token.balanceOf(address(0xBEEF), 1339), 300);
         assertEq(token.balanceOf(address(0xBEEF), 1340), 400);
         assertEq(token.balanceOf(address(0xBEEF), 1341), 500);
+
+        assertEq(erc1155Yul.balanceOf(address(0xBEEF), 1337), 100);
     }
 
     function testBatchMintToERC1155Recipient() public {
