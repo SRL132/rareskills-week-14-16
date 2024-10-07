@@ -125,8 +125,6 @@ object "ERC1155" {
          let amountsLength:= calldataload(0x54)
          let amountsOffset := add(calldataload(0x44), 0x20)
          let dataOffset := add(calldataload(0x64), 0x20)
-     
-
   
         //    ids and amounts layout
         //    offset
@@ -147,9 +145,6 @@ object "ERC1155" {
                 let currentBalance := sload(balanceSlot)
                 sstore(balanceSlot, 100)
             }
-
-
-                return(0, 0)
         }
 
         /* -------- internal functions ---------- */
