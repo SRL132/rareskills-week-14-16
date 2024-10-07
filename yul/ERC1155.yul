@@ -38,7 +38,9 @@ object "ERC1155" {
                 return(0, 32)
             }
 
-            case 0xb48ab8b6 {
+            case 0xb48ab8b6 /* batchMint(address to, uint256[] calldata ids, uint256[] calldata amounts,
+            bytes calldata data)*/ 
+            {
                 batchMint()
            return(0, 0)
             }
@@ -114,18 +116,30 @@ object "ERC1155" {
         );
     }
 */
+//address to, uint256[] calldata ids, uint256[] calldata amounts,
+//            bytes calldata data
         function batchMint() {
-      //      uint256 idsLength = ids.length; // Saves MLOADs.
-
+          //      uint256 idsLength = ids.length; // Saves MLOADs.
          //   require(idsLength == amounts.length, "LENGTH_MISMATCH");
          let to := calldataload(4)
-         let idsLength := calldataload(36)
-
+    // 0x1fe457d7                                                         - function signature
+    //  0000000000000000000000000000000000000000000000000000000000000020 - offset of [1,2,3]
+    //  0000000000000000000000000000000000000000000000000000000000000003 - count for [1,2,3]
+    //  0000000000000000000000000000000000000000000000000000000000000001 - encoding of 1
+    //  0000000000000000000000000000000000000000000000000000000000000002 - encoding of 2
+    //  0000000000000000000000000000000000000000000000000000000000000003 - encoding of 3
+         let idsLength := calldataload(0x44)
          let idsOffset := add(calldataload(0x24), 0x20)
-         let amountsLength:= calldataload(0x54)
-         let amountsOffset := add(calldataload(0x44), 0x20)
+         let amountsOffset := add(calldataload(36), mul(0x20, idsLength))
+         let amountsLength:= calldataload(68)
+
          let dataOffset := add(calldataload(0x64), 0x20)
-  
+
+
+         if iszero(eq(idsLength, amountsLength)) {
+            revert(0, 0)
+        }
+
         //    ids and amounts layout
         //    offset
          //   length
@@ -139,7 +153,7 @@ object "ERC1155" {
                 let amount := calldataload(add(amountsOffset, mul(add(i, 1), 0x20)))
 
                 // Calculate the storage slot for balanceOf[to][id]
-                let balanceSlot := accountToStorageOffset(0xBEEF, 1337)
+                let balanceSlot := accountToStorageOffset(to, 1337)
 
                 // Load the current balance, add the amount, and store it back
                 let currentBalance := sload(balanceSlot)
