@@ -128,10 +128,11 @@ object "ERC1155" {
     //  0000000000000000000000000000000000000000000000000000000000000001 - encoding of 1
     //  0000000000000000000000000000000000000000000000000000000000000002 - encoding of 2
     //  0000000000000000000000000000000000000000000000000000000000000003 - encoding of 3
-         let idsLength := calldataload(0x44)
-         let idsOffset := add(calldataload(0x24), 0x20)
-         let amountsOffset := add(calldataload(36), mul(0x20, idsLength))
-         let amountsLength:= calldataload(68)
+         let idsOffset := calldataload(0x44)
+         let idsLength := calldataload(0x84)
+
+         let amountsOffset := calldataload(0x124)
+         let amountsLength:= calldataload(0x144)
 
          let dataOffset := add(calldataload(0x64), 0x20)
 
@@ -149,15 +150,15 @@ object "ERC1155" {
             let i :=0
             for { } lt(i, idsLength) { i := add(i, 1) } {
                 // Load the id and amount
-                let id := calldataload(add(idsOffset, mul(add(i, 1), 0x20)))
-                let amount := calldataload(add(amountsOffset, mul(add(i, 1), 0x20)))
+                let id  := calldataload(add(0x64, mul(i, 0x20)))
+                let amount := calldataload(0x164)
 
                 // Calculate the storage slot for balanceOf[to][id]
-                let balanceSlot := accountToStorageOffset(to, 1337)
+                let balanceSlot := accountToStorageOffset(to, id)
 
                 // Load the current balance, add the amount, and store it back
                 let currentBalance := sload(balanceSlot)
-                sstore(balanceSlot, 100)
+                sstore(balanceSlot,  amount)
             }
         }
 
