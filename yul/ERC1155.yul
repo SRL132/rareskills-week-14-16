@@ -33,7 +33,7 @@ object "ERC1155" {
             case 0x00fdd58e /* balanceOf(address,uint256) */ {
                 let account := calldataload(4)
                 let id := calldataload(36)
-                let bal := balanceOf(0xBEEF, 1337)
+                let bal := balanceOf(account, id)
                 mstore(0, bal)
                 return(0, 32)
             }
@@ -121,24 +121,28 @@ object "ERC1155" {
         function batchMint() {
           //      uint256 idsLength = ids.length; // Saves MLOADs.
          //   require(idsLength == amounts.length, "LENGTH_MISMATCH");
-         let to := calldataload(4)
+         let to := decodeAsAddress(0)
     // 0x1fe457d7                                                         - function signature
     //  0000000000000000000000000000000000000000000000000000000000000020 - offset of [1,2,3]
     //  0000000000000000000000000000000000000000000000000000000000000003 - count for [1,2,3]
     //  0000000000000000000000000000000000000000000000000000000000000001 - encoding of 1
     //  0000000000000000000000000000000000000000000000000000000000000002 - encoding of 2
     //  0000000000000000000000000000000000000000000000000000000000000003 - encoding of 3
-         let idsOffset := calldataload(0x44)
-         let idsLength := calldataload(0x84)
+    //TODO: understand decodeAsUint
+         let idsOffset := add(decodeAsUint(1), 0x04)
+         
+         let idsLength := calldataload(idsOffset)
 
-         let amountsOffset := calldataload(0x124)
-         let amountsLength:= calldataload(0x144)
+         let amountsOffset := add(decodeAsUint(2), 0x04)
 
-         let dataOffset := add(calldataload(0x64), 0x20)
+         let amountsLength:= calldataload(amountsOffset)
 
-
+         let dataOffset :=  add(decodeAsUint(3), 0x04)
+            //TODO: add custom error
          if iszero(eq(idsLength, amountsLength)) {
-            revert(0, 0)
+            //ERC1155_LENGTH_MISMATCH
+               // mstore(0x00, 0x3b3b57de)
+                revert(0, 0) // Revert with the error selector
         }
 
         //    ids and amounts layout
@@ -150,8 +154,8 @@ object "ERC1155" {
             let i :=0
             for { } lt(i, idsLength) { i := add(i, 1) } {
                 // Load the id and amount
-                let id  := calldataload(add(0x64, mul(i, 0x20)))
-                let amount := calldataload(0x164)
+                let id  := calldataload(add(idsOffset, mul(i, 0x20)))
+                let amount := calldataload(add(amountsOffset, mul(i, 0x20)))
 
                 // Calculate the storage slot for balanceOf[to][id]
                 let balanceSlot := accountToStorageOffset(to, id)
@@ -176,17 +180,24 @@ object "ERC1155" {
         }
 
         function decodeAsAddress(offset) -> v {
+            // Decode the value as a uint256
             v := decodeAsUint(offset)
+            // Check if the value fits within the address size (20 bytes)
             if iszero(iszero(and(v, not(0xffffffffffffffffffffffffffffffffffffffff)))) {
                 revert(0, 0)
             }
         }
 
         function decodeAsUint(offset) -> v {
+            // Calculate the position in calldata
             let pos := add(4, mul(offset, 0x20))
+
+            // Check if calldata size is sufficient to read 32 bytes from the calculated position
             if lt(calldatasize(), add(pos, 0x20)) {
                 revert(0, 0)
             }
+
+            // Load the 32-byte value from calldata at the calculated position
             v := calldataload(pos)
         }
 

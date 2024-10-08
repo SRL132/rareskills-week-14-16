@@ -192,6 +192,10 @@ contract ERC1155Test is DSTestPlus, ERC1155TokenReceiver {
         assertEq(token.balanceOf(address(0xBEEF), 1341), 500);
 
         assertEq(erc1155Yul.balanceOf(address(0xBEEF), 1337), 100);
+        assertEq(erc1155Yul.balanceOf(address(0xBEEF), 1338), 200);
+        assertEq(erc1155Yul.balanceOf(address(0xBEEF), 1339), 300);
+        assertEq(erc1155Yul.balanceOf(address(0xBEEF), 1340), 400);
+        //  assertEq(erc1155Yul.balanceOf(address(0xBEEF), 1341), 500);
     }
 
     function testBatchMintToERC1155Recipient() public {
