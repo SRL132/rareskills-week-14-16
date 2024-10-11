@@ -31,18 +31,23 @@ object "ERC1155" {
             switch getSelector()
 
             case 0x00fdd58e /* balanceOf(address,uint256) */ {
-                let account := calldataload(4)
-                let id := calldataload(36)
-                let bal := balanceOf(account, id)
-                mstore(0, bal)
-                return(0, 32)
+              //  let account := calldataload(4)
+               // let id := calldataload(36)
+               // let bal := balanceOf(account, id)
+               // mstore(0, bal)
+              //  return(0, 32)
+                returnUint(balanceOf(decodeAsAddress(0), decodeAsUint(1)))
             }
 
             case 0xb48ab8b6 /* batchMint(address to, uint256[] calldata ids, uint256[] calldata amounts,
             bytes calldata data)*/ 
             {
                 batchMint()
-           return(0, 0)
+                return(0, 0)
+            }
+
+            case 0x2eb2c2d6 /* "safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)" */ {
+                safeBatchTransferFrom(decodeAsAddress(0), decodeAsAddress(1), decodeAsUint(2), decodeAsUint(3), decodeAsUint(4))
             }
 
             default {
@@ -58,7 +63,9 @@ object "ERC1155" {
 
 
         function accountToStorageOffset(account, id) -> offset {
-            offset := add(keccak256(account, id), 1)
+            mstore(0, id)
+            mstore(0x20, account)
+            offset := keccak256(0, 0x40)
         }
 
         /* -------- storage access ---------- */
@@ -67,9 +74,38 @@ object "ERC1155" {
             bal := sload(accountToStorageOffset(account, id))
         }
 
-        /* -------- external functions ---------- */
-        function safeBatchTransferFrom(from, to, ids, values, data) {
+        function balanceStorageOffset(id, account) -> offset {
+            mstore(0, id)
+            mstore(0x20, account)
+            offset := keccak256(0, 0x40)
+        }
 
+        /* -------- external functions ---------- */
+        function safeBatchTransferFrom(from, to, idsOffset, amountsOffset, dataOffset) {
+            _safeBatchTransferFrom(from, to, idsOffset, amountsOffset, dataOffset)
+        }
+
+        function _safeBatchTransferFrom(from, to, idsOffset, amountsOffset, dataOffset) {
+            let idsLen := decodeAsArrayLen(idsOffset)
+            let amountsLen := decodeAsArrayLen(amountsOffset)
+
+            let firstIdPtr := add(idsOffset, 0x24)           // ptr to first id element
+            let firstAmountPtr := add(amountsOffset, 0x24)   // ptr to first amount element
+
+            for { let i := 0} lt(i, idsLen) { i := add(i, 1) }
+            {
+                let id := calldataload(add(firstIdPtr, mul(i, 0x20)))
+                let amount := calldataload(add(firstAmountPtr, mul(i, 0x20)))
+
+                let fromBalance := sload(balanceStorageOffset(id, from))
+
+                _subBalance(from, id, amount)
+                _addBalance(to, id, amount)
+
+            }
+            let operator := caller()
+
+     //       _doSafeBatchTransferAcceptanceCheck(operator, from, to, idsOffset, amountsOffset, dataOffset)
         }
 
         function balanceOfBatch(owners, ids) -> balances {
@@ -183,7 +219,10 @@ object "ERC1155" {
             // Decode the value as a uint256
             v := decodeAsUint(offset)
             // Check if the value fits within the address size (20 bytes)
-            if iszero(iszero(and(v, not(0xffffffffffffffffffffffffffffffffffffffff)))) {
+            //This operation inverts all the bits of the 160-bit hexadecimal value 0xffffffffffffffffffffffffffffffffffffffff, so fs become 0s and 0s become fs
+            //The result is 0xffffffffffffffffffffffff0000000000000000000000000000000000000000
+            //v & not(0xffffffffffffffffffffffffffffffffffffffff) will be 0 if the value is less than 2^160
+            if iszero(iszero(and(v, 0xffffffffffffffffffffffff0000000000000000000000000000000000000000))) {
                 revert(0, 0)
             }
         }
@@ -201,10 +240,38 @@ object "ERC1155" {
             v := calldataload(pos)
         }
 
+        function decodeAsArrayLen(offset) -> len {
+            len := calldataload(add(offset, 4))
+        }
+
         function getSelector() -> sel {
             // Shift right by 224 bits (32 - 4 bytes) to get the first 4 bytes
             sel := shr(224, calldataload(0))
         }
+
+        function _addBalance(to, id, amount) {
+            let offset := balanceStorageOffset(id, to)
+            let prev := sload(offset)
+            sstore(offset, safeAdd(prev, amount))
+        }
+
+        // this function does not check underflow, so needs to be checked before using
+        function _subBalance(to, id, amount) {
+            let offset := balanceStorageOffset(id, to)
+            let prev := sload(offset)
+            sstore(offset, sub(prev, amount))
+        }
+
+        function safeAdd(a, b) -> r {
+            r := add(a, b)
+            if or(lt(r, a), lt(r, b)) { revert(0, 0) }
+        }
+
+        function returnUint(v) {
+            mstore(0, v)
+            return(0, 0x20)
+        }
+
     }
     }
 }

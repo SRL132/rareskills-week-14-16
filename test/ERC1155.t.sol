@@ -21,6 +21,14 @@ interface ERC1155Yul {
         address account,
         uint256 id
     ) external view returns (uint256);
+
+    function safeBatchTransferFrom(
+        address from,
+        address to,
+        uint256[] calldata ids,
+        uint256[] calldata amounts,
+        bytes calldata data
+    ) external;
 }
 
 contract ERC1155Recipient is ERC1155TokenReceiver {
@@ -146,6 +154,7 @@ contract ERC1155Test is DSTestPlus, ERC1155TokenReceiver {
     function setUp() public {
         token = new MockERC1155();
         erc1155Yul = ERC1155Yul(yulDeployer.deployContract("ERC1155"));
+        hevm.label(address(erc1155Yul), "ERC1155Yul");
     }
 
     function testMintToEOA() public {
@@ -401,11 +410,20 @@ contract ERC1155Test is DSTestPlus, ERC1155TokenReceiver {
         transferAmounts[4] = 250;
 
         token.batchMint(from, ids, mintAmounts, "");
+        erc1155Yul.batchMint(from, ids, mintAmounts, "");
 
         hevm.prank(from);
         token.setApprovalForAll(address(this), true);
 
         token.safeBatchTransferFrom(
+            from,
+            address(to),
+            ids,
+            transferAmounts,
+            "testing 123"
+        );
+
+        erc1155Yul.safeBatchTransferFrom(
             from,
             address(to),
             ids,
@@ -420,19 +438,33 @@ contract ERC1155Test is DSTestPlus, ERC1155TokenReceiver {
         assertBytesEq(to.batchData(), "testing 123");
 
         assertEq(token.balanceOf(from, 1337), 50);
+        assertEq(erc1155Yul.balanceOf(from, 1337), 50);
         assertEq(token.balanceOf(address(to), 1337), 50);
+        assertEq(erc1155Yul.balanceOf(address(to), 1337), 50);
 
         assertEq(token.balanceOf(from, 1338), 100);
         assertEq(token.balanceOf(address(to), 1338), 100);
 
+        assertEq(erc1155Yul.balanceOf(from, 1338), 100);
+        assertEq(erc1155Yul.balanceOf(address(to), 1338), 100);
+
         assertEq(token.balanceOf(from, 1339), 150);
         assertEq(token.balanceOf(address(to), 1339), 150);
+
+        assertEq(erc1155Yul.balanceOf(from, 1339), 150);
+        assertEq(erc1155Yul.balanceOf(address(to), 1339), 150);
 
         assertEq(token.balanceOf(from, 1340), 200);
         assertEq(token.balanceOf(address(to), 1340), 200);
 
+        assertEq(erc1155Yul.balanceOf(from, 1340), 200);
+        assertEq(erc1155Yul.balanceOf(address(to), 1340), 200);
+
         assertEq(token.balanceOf(from, 1341), 250);
         assertEq(token.balanceOf(address(to), 1341), 250);
+
+        //       assertEq(erc1155Yul.balanceOf(from, 1341), 250);
+        //      assertEq(erc1155Yul.balanceOf(address(to), 1341), 250);
     }
 
     function testBatchBalanceOf() public {
