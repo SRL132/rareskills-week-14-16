@@ -31,11 +31,6 @@ object "ERC1155" {
             switch getSelector()
 
             case 0x00fdd58e /* balanceOf(address,uint256) */ {
-              //  let account := calldataload(4)
-               // let id := calldataload(36)
-               // let bal := balanceOf(account, id)
-               // mstore(0, bal)
-              //  return(0, 32)
                 returnUint(balanceOf(decodeAsAddress(0), decodeAsUint(1)))
             }
 
@@ -43,7 +38,6 @@ object "ERC1155" {
             bytes calldata data)*/ 
             {
                 batchMint()
-                return(0, 0)
             }
 
             case 0x2eb2c2d6 /* "safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)" */ {
@@ -81,6 +75,28 @@ object "ERC1155" {
         }
 
         /* -------- external functions ---------- */
+
+//example cast abi-encode "safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)" 
+//0x000000000000000000000000000000000000ABCD 0x0000000000000000000000000000000000001234 "[1337, 1338, 1339, 1340]" "[100, 200, 300, 400]" 0x
+
+//0x000000000000000000000000000000000000000000000000000000000000abcd —>FROM
+//0000000000000000000000000000000000000000000000000000000000001234 —>TO
+//00000000000000000000000000000000000000000000000000000000000000a0 —>160 idsOffset
+//0000000000000000000000000000000000000000000000000000000000000140 —>320 amountsOffset
+//00000000000000000000000000000000000000000000000000000000000001e0 —>480 dataOffset
+
+//0000000000000000000000000000000000000000000000000000000000000004 —>4
+//000000000000000000000000000000000000000000000000000000000000539 —>1337
+//000000000000000000000000000000000000000000000000000000000000053a —>1338
+//000000000000000000000000000000000000000000000000000000000000053b —>1339
+//000000000000000000000000000000000000000000000000000000000000053c —>1340
+
+//0000000000000000000000000000000000000000000000000000000000000004 —> 4
+//0000000000000000000000000000000000000000000000000000000000000064 —>100
+//00000000000000000000000000000000000000000000000000000000000000c8 —>200
+//000000000000000000000000000000000000000000000000000000000000012c —>300
+//0000000000000000000000000000000000000000000000000000000000000190 —>400
+//0000000000000000000000000000000000000000000000000000000000000000 —>DATA
         function safeBatchTransferFrom(from, to, idsOffset, amountsOffset, dataOffset) {
             _safeBatchTransferFrom(from, to, idsOffset, amountsOffset, dataOffset)
         }
@@ -89,8 +105,14 @@ object "ERC1155" {
             let idsLen := decodeAsArrayLen(idsOffset)
             let amountsLen := decodeAsArrayLen(amountsOffset)
 
-            let firstIdPtr := add(idsOffset, 0x24)           // ptr to first id element
-            let firstAmountPtr := add(amountsOffset, 0x24)   // ptr to first amount element
+            require(from)
+
+            require(to)
+
+            require(eq(idsLen, amountsLen))
+
+            let firstIdPtr := add(idsOffset, 0x24)
+            let firstAmountPtr := add(amountsOffset, 0x24)
 
             for { let i := 0} lt(i, idsLen) { i := add(i, 1) }
             {
@@ -105,7 +127,7 @@ object "ERC1155" {
             }
             let operator := caller()
 
-     //       _doSafeBatchTransferAcceptanceCheck(operator, from, to, idsOffset, amountsOffset, dataOffset)
+            _doSafeBatchTransferAcceptanceCheck(operator, from, to, idsOffset, amountsOffset, dataOffset)
         }
 
         function balanceOfBatch(owners, ids) -> balances {
@@ -114,6 +136,35 @@ object "ERC1155" {
 
         function mint(to, id, amount, data) {
 
+        }
+
+        function _doSafeBatchTransferAcceptanceCheck(operator, from, to, id, amount, dataOffset){
+          if requireNoRevert(gt(extcodesize(to), 0)) {
+                let selector := 0xf23a6e6100000000000000000000000000000000000000000000000000000000 // onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)
+                let selectorMemoryPtr := mload(0x40)
+                mstore(selectorMemoryPtr, selector)
+                mstore(add(selectorMemoryPtr, 0x04), operator)
+                mstore(add(selectorMemoryPtr, 0x24), from)
+                mstore(add(selectorMemoryPtr, 0x44), id)
+                mstore(add(selectorMemoryPtr, 0x64), amount)
+                mstore(add(selectorMemoryPtr, 0x84), 0xa0) //0xa0  -->160, 
+                let endPtr := copyBytesToMemory(add(selectorMemoryPtr, 0xa4), dataOffset) // Copies 'data' to memory
+                mstore(0x40, endPtr)
+
+                mstore(0x00, 0) // clear memory
+                if requireNoRevert(call(gas(), to, 0, selectorMemoryPtr, sub(endPtr, selectorMemoryPtr), 0x00, 0x04)) {
+                    if gt(returndatasize(), 0x04) {
+                        returndatacopy(0x00, 0, returndatasize())
+                        revert(0x00, returndatasize())
+                    }
+                   revert(0, 0)
+                }
+
+                // reverts if it does not return proper selector (0xf23a6e61)
+                if requireNoRevert(eq(selector, mload(0))) {
+                    revert(0, 0)
+                }
+            }
         }
             /*
     function _batchMint(
@@ -215,6 +266,10 @@ object "ERC1155" {
             if iszero(condition) { revert(0, 0) }
         }
 
+        function requireNoRevert(condition) ->res {
+            res := iszero(condition)
+        }
+
         function decodeAsAddress(offset) -> v {
             // Decode the value as a uint256
             v := decodeAsUint(offset)
@@ -270,6 +325,20 @@ object "ERC1155" {
         function returnUint(v) {
             mstore(0, v)
             return(0, 0x20)
+        }
+
+        function copyBytesToMemory(mptr, dataOffset) -> newMptr {
+            let dataLenOffset := add(dataOffset, 4)
+            let dataLen := calldataload(dataLenOffset)
+
+            let totalLen := add(0x20, dataLen) // dataLen+data
+            let remainder := mod(dataLen, 0x20)
+            if remainder {
+                totalLen := add(totalLen, sub(0x20, remainder))
+            }
+            calldatacopy(mptr, dataLenOffset, totalLen)
+
+            newMptr := add(mptr, totalLen)
         }
 
     }
