@@ -166,43 +166,7 @@ object "ERC1155" {
                 }
             }
         }
-            /*
-    function _batchMint(
-        address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
-    ) internal virtual {
-        uint256 idsLength = ids.length; // Saves MLOADs.
-
-        require(idsLength == amounts.length, "LENGTH_MISMATCH");
-
-        for (uint256 i = 0; i < idsLength; ) {
-            balanceOf[to][ids[i]] += amounts[i];
-
-            // An array can't have a total length
-            // larger than the max uint256 value.
-            unchecked {
-                ++i;
-            }
-        }
-
-        emit TransferBatch(msg.sender, address(0), to, ids, amounts);
-
-        require(
-            to.code.length == 0
-                ? to != address(0)
-                : ERC1155TokenReceiver(to).onERC1155BatchReceived(
-                    msg.sender,
-                    address(0),
-                    ids,
-                    amounts,
-                    data
-                ) == ERC1155TokenReceiver.onERC1155BatchReceived.selector,
-            "UNSAFE_RECIPIENT"
-        );
-    }
-*/
+        
 //address to, uint256[] calldata ids, uint256[] calldata amounts,
 //            bytes calldata data
         function batchMint() {
