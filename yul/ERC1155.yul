@@ -10,8 +10,8 @@ Events
 Functions
 
 - [ ]  **`function** safeTransferFrom(**address** _from, **address** _to, **uint256** _id, **uint256** _value, **bytes** **calldata** _data) **external**;`
-- [ ]  **`function** safeBatchTransferFrom(**address** _from, **address** _to, **uint256**[] **calldata** _ids, **uint256**[] **calldata** _values, **bytes** **calldata** _data) **external**;`
-- [ ]  **`function** balanceOf(**address** _owner, **uint256** _id) **external** **view** **returns** (**uint256**);`
+- [x]  **`function** safeBatchTransferFrom(**address** _from, **address** _to, **uint256**[] **calldata** _ids, **uint256**[] **calldata** _values, **bytes** **calldata** _data) **external**;`
+- [x]  **`function** balanceOf(**address** _owner, **uint256** _id) **external** **view** **returns** (**uint256**);`
 - [ ]  **`function** balanceOfBatch(**address**[] **calldata** _owners, **uint256**[] **calldata** _ids) **external** **view** **returns** (**uint256**[] **memory**);`
 - [ ]  **`function** setApprovalForAll(**address** _operator, **bool** _approved) **external**;`
 - [ ]  **`function** isApprovedForAll(**address** _owner, **address** _operator) **external** **view** **returns** (**bool**);`
@@ -39,6 +39,18 @@ object "ERC1155" {
             {
                 batchMint()
             }
+
+            //TODO: 
+            
+            //batchBurn
+            //balanceOfBatch
+            //mint
+            //burn
+            //transfer
+            //setApprovalForAll
+            //isApprovedForAll
+            //events
+            //custom errors
 
             case 0x2eb2c2d6 /* "safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)" */ {
                 safeBatchTransferFrom(decodeAsAddress(0), decodeAsAddress(1), decodeAsUint(2), decodeAsUint(3), decodeAsUint(4))
@@ -166,7 +178,7 @@ object "ERC1155" {
                 }
             }
         }
-        
+
 //address to, uint256[] calldata ids, uint256[] calldata amounts,
 //            bytes calldata data
         function batchMint() {

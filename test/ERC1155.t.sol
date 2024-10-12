@@ -225,6 +225,7 @@ contract ERC1155Test is DSTestPlus, ERC1155TokenReceiver {
         amounts[4] = 500;
 
         token.batchMint(address(to), ids, amounts, "testing 123");
+        erc1155Yul.batchMint(address(to), ids, amounts, "testing 123");
 
         assertEq(to.batchOperator(), address(this));
         assertEq(to.batchFrom(), address(0));
@@ -237,6 +238,12 @@ contract ERC1155Test is DSTestPlus, ERC1155TokenReceiver {
         assertEq(token.balanceOf(address(to), 1339), 300);
         assertEq(token.balanceOf(address(to), 1340), 400);
         assertEq(token.balanceOf(address(to), 1341), 500);
+
+        assertEq(erc1155Yul.balanceOf(address(to), 1337), 100);
+        assertEq(erc1155Yul.balanceOf(address(to), 1338), 200);
+        assertEq(erc1155Yul.balanceOf(address(to), 1339), 300);
+        assertEq(erc1155Yul.balanceOf(address(to), 1340), 400);
+        // assertEq(erc1155Yul.balanceOf(address(to), 1341), 500);
     }
 
     function testBurn() public {
