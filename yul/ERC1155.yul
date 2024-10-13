@@ -34,6 +34,10 @@ object "ERC1155" {
                 returnUint(balanceOf(decodeAsAddress(0), decodeAsUint(1)))
             }
 
+            case 0x731133e9 /* mint(address,uint256,uint256,bytes) */ {
+                mint(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2), decodeAsUint(3))
+            }
+
             case 0xb48ab8b6 /* batchMint(address to, uint256[] calldata ids, uint256[] calldata amounts,
             bytes calldata data)*/ 
             {
@@ -41,16 +45,18 @@ object "ERC1155" {
             }
 
             //TODO: 
-            
-            //batchBurn
             //balanceOfBatch
+            //setApprovalForAll
+            //isApprovedForAll
             //mint
             //burn
             //transfer
-            //setApprovalForAll
-            //isApprovedForAll
             //events
             //custom errors
+
+            case 0x4e1273f4 /*balanceOfBatch(address[],uint256[]*/ {
+                balanceOfBatch(decodeAsUint(0), decodeAsUint(1))
+            }
 
             case 0x2eb2c2d6 /* "safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)" */ {
                 safeBatchTransferFrom(decodeAsAddress(0), decodeAsAddress(1), decodeAsUint(2), decodeAsUint(3), decodeAsUint(4))
@@ -146,12 +152,32 @@ object "ERC1155" {
             _doSafeBatchTransferAcceptanceCheck(operator, from, to, idsOffset, amountsOffset, dataOffset)
         }
 
-        function balanceOfBatch(owners, ids) -> balances {
+        function balanceOfBatch(accountsOffset, idsOffset) {
+            let accountsLen := decodeAsArrayLen(accountsOffset)
+            let idLen := decodeAsArrayLen(idsOffset)
 
-        }
+            require(eq(accountsLen, idLen))
 
-        function mint(to, id, amount, data) {
+            let mptr := 0x80
+            mstore(mptr, 0x20) // array offset
+            mptr := add(mptr, 0x20)
 
+            mstore(mptr, accountsLen) // array len
+            mptr := add(mptr, 0x20)
+
+            let accountsStartOffset := add(accountsOffset, 0x24) // ptr to 1st element of accounts
+            let idsStartOffset := add(idsOffset, 0x24) // ptr to 1st elements of ids
+
+            // return array
+            for { let i := 0 } lt(i, accountsLen) { i:= add(i, 1)}
+            {    
+                let account := calldataload(add(accountsStartOffset, mul(0x20, i)))
+                let id := calldataload(add(idsStartOffset, mul(0x20, i)))
+                mstore(mptr, balanceOf(account, id)) // store i th element
+                mptr := add(mptr, 0x20)
+            }
+
+            return(0x80, sub(mptr, 0x80))
         }
 
         function _doSafeBatchTransferAcceptanceCheck(operator, from, to, id, amount, dataOffset){
@@ -253,10 +279,11 @@ object "ERC1155" {
             }
         }
 
+        function mint(to, id, amount, dataOffset){
+            _addBalance(to, id, amount)
+        }
+
         /* -------- internal functions ---------- */
-        function _mint(to, id, amount, data){}
-
-
 
          /* -------- helper functions ---------- */
 

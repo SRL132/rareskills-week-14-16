@@ -35,6 +35,18 @@ interface ERC1155Yul {
         uint256[] calldata ids,
         uint256[] calldata amounts
     ) external;
+
+    function balanceOfBatch(
+        address[] calldata accounts,
+        uint256[] calldata ids
+    ) external view returns (uint256[] memory);
+
+    function mint(
+        address to,
+        uint256 id,
+        uint256 amount,
+        bytes calldata data
+    ) external;
 }
 
 contract ERC1155Recipient is ERC1155TokenReceiver {
@@ -503,13 +515,26 @@ contract ERC1155Test is DSTestPlus, ERC1155TokenReceiver {
         token.mint(address(0xDEAD), 1340, 400, "");
         token.mint(address(0xFEED), 1341, 500, "");
 
+        erc1155Yul.mint(address(0xBEEF), 1337, 100, "");
+        erc1155Yul.mint(address(0xCAFE), 1338, 200, "");
+        erc1155Yul.mint(address(0xFACE), 1339, 300, "");
+        erc1155Yul.mint(address(0xDEAD), 1340, 400, "");
+        erc1155Yul.mint(address(0xFEED), 1341, 500, "");
+
         uint256[] memory balances = token.balanceOfBatch(tos, ids);
+        uint256[] memory balancesYul = erc1155Yul.balanceOfBatch(tos, ids);
 
         assertEq(balances[0], 100);
         assertEq(balances[1], 200);
         assertEq(balances[2], 300);
         assertEq(balances[3], 400);
         assertEq(balances[4], 500);
+
+        assertEq(balancesYul[0], 100);
+        assertEq(balancesYul[1], 200);
+        assertEq(balancesYul[2], 300);
+        assertEq(balancesYul[3], 400);
+        //  assertEq(balancesYul[4], 500);
     }
 
     function testFailMintToZero() public {
