@@ -56,6 +56,10 @@ object "ERC1155" {
                 safeBatchTransferFrom(decodeAsAddress(0), decodeAsAddress(1), decodeAsUint(2), decodeAsUint(3), decodeAsUint(4))
             }
 
+            case 0xf6eb127a /* batchBurn(address,uint256[],uint256[]) */ {    
+                batchBurn(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2))
+            }
+
             default {
                 revert(0,0)
             }
@@ -229,12 +233,30 @@ object "ERC1155" {
             }
         }
 
+        function batchBurn(from, idsOffset, amountsOffset){
+            let idsLength := decodeAsArrayLen(idsOffset)
+            let amountsLength := decodeAsArrayLen(amountsOffset)
+
+           require(eq(idsLength, amountsLength))
+
+            let firstIdPtr := add(idsOffset, 0x24)
+            let firstAmountPtr := add(amountsOffset, 0x24)
+
+            for { let i := 0} lt(i, idsLength) { i := add(i, 1) }
+            {
+                let id := calldataload(add(firstIdPtr, mul(i, 0x20)))
+                let amount := calldataload(add(firstAmountPtr, mul(i, 0x20)))
+
+                let fromBalance := sload(balanceStorageOffset(id, from))
+
+                _subBalance(from, id, amount)
+            }
+        }
+
         /* -------- internal functions ---------- */
         function _mint(to, id, amount, data){}
 
-        function _batchMint(to, ids, amounts, data){}
 
-        function _batchBurn(from, ids, amounts){}
 
          /* -------- helper functions ---------- */
 

@@ -29,6 +29,12 @@ interface ERC1155Yul {
         uint256[] calldata amounts,
         bytes calldata data
     ) external;
+
+    function batchBurn(
+        address from,
+        uint256[] calldata ids,
+        uint256[] calldata amounts
+    ) external;
 }
 
 contract ERC1155Recipient is ERC1155TokenReceiver {
@@ -277,8 +283,10 @@ contract ERC1155Test is DSTestPlus, ERC1155TokenReceiver {
         burnAmounts[4] = 250;
 
         token.batchMint(address(0xBEEF), ids, mintAmounts, "");
+        erc1155Yul.batchMint(address(0xBEEF), ids, mintAmounts, "");
 
         token.batchBurn(address(0xBEEF), ids, burnAmounts);
+        erc1155Yul.batchBurn(address(0xBEEF), ids, burnAmounts);
 
         assertEq(token.balanceOf(address(0xBEEF), 1337), 50);
         assertEq(token.balanceOf(address(0xBEEF), 1338), 100);
