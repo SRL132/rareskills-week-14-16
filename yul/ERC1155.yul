@@ -9,7 +9,7 @@ Events
 
 Functions
 
-- [ ]  **`function** safeTransferFrom(**address** _from, **address** _to, **uint256** _id, **uint256** _value, **bytes** **calldata** _data) **external**;`
+- [x]  **`function** safeTransferFrom(**address** _from, **address** _to, **uint256** _id, **uint256** _value, **bytes** **calldata** _data) **external**;`
 - [x]  **`function** safeBatchTransferFrom(**address** _from, **address** _to, **uint256**[] **calldata** _ids, **uint256**[] **calldata** _values, **bytes** **calldata** _data) **external**;`
 - [x]  **`function** balanceOf(**address** _owner, **uint256** _id) **external** **view** **returns** (**uint256**);`
 - [x]  **`function** balanceOfBatch(**address**[] **calldata** _owners, **uint256**[] **calldata** _ids) **external** **view** **returns** (**uint256**[] **memory**);`
@@ -42,6 +42,10 @@ object "ERC1155" {
             bytes calldata data)*/ 
             {
                 batchMint()
+            }
+
+            case 0xf242432a /* "safeTransferFrom(address,address,uint256,uint256,bytes)" */ {
+                safeTransferFrom(decodeAsAddress(0), decodeAsAddress(1), decodeAsUint(2), decodeAsUint(3), decodeAsUint(4))
             }
 
             //TODO: 
@@ -123,6 +127,13 @@ object "ERC1155" {
 //0000000000000000000000000000000000000000000000000000000000000000 —>DATA
         function safeBatchTransferFrom(from, to, idsOffset, amountsOffset, dataOffset) {
             _safeBatchTransferFrom(from, to, idsOffset, amountsOffset, dataOffset)
+        }
+
+        function safeTransferFrom(from, to, id, amount, dataOffset) {
+            let fromBalance:= sload(balanceStorageOffset(id, from))
+            require(lt(amount, fromBalance))
+            _addBalance(to, id, amount)
+            _subBalance(from, id, amount)
         }
 
         function _safeBatchTransferFrom(from, to, idsOffset, amountsOffset, dataOffset) {

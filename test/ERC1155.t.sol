@@ -49,6 +49,14 @@ interface ERC1155Yul {
     ) external;
 
     function burn(address from, uint256 id, uint256 amount) external;
+
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 id,
+        uint256 amount,
+        bytes calldata data
+    ) external;
 }
 
 contract ERC1155Recipient is ERC1155TokenReceiver {
@@ -322,14 +330,18 @@ contract ERC1155Test is DSTestPlus, ERC1155TokenReceiver {
         address from = address(0xABCD);
 
         token.mint(from, 1337, 100, "");
+        erc1155Yul.mint(from, 1337, 100, "");
 
         hevm.prank(from);
         token.setApprovalForAll(address(this), true);
 
         token.safeTransferFrom(from, address(0xBEEF), 1337, 70, "");
+        erc1155Yul.safeTransferFrom(from, address(0xBEEF), 1337, 70, "");
 
         assertEq(token.balanceOf(address(0xBEEF), 1337), 70);
+        assertEq(erc1155Yul.balanceOf(address(0xBEEF), 1337), 70);
         assertEq(token.balanceOf(from, 1337), 30);
+        assertEq(erc1155Yul.balanceOf(from, 1337), 30);
     }
 
     function testSafeTransferFromToERC1155Recipient() public {
