@@ -51,8 +51,6 @@ object "ERC1155" {
             //TODO: 
             //setApprovalForAll
             //isApprovedForAll
-            //burn
-            //transfer
             //events
             //custom errors
 
