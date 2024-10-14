@@ -45,10 +45,8 @@ object "ERC1155" {
             }
 
             //TODO: 
-            //balanceOfBatch
             //setApprovalForAll
             //isApprovedForAll
-            //mint
             //burn
             //transfer
             //events
@@ -56,6 +54,10 @@ object "ERC1155" {
 
             case 0x4e1273f4 /*balanceOfBatch(address[],uint256[]*/ {
                 balanceOfBatch(decodeAsUint(0), decodeAsUint(1))
+            }
+
+            case 0xf5298aca /* burn(address,uint256,uint256) */ {
+                burn(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2))
             }
 
             case 0x2eb2c2d6 /* "safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)" */ {
@@ -281,6 +283,10 @@ object "ERC1155" {
 
         function mint(to, id, amount, dataOffset){
             _addBalance(to, id, amount)
+        }
+
+        function burn(from, id, amount){
+            _subBalance(from, id, amount)
         }
 
         /* -------- internal functions ---------- */

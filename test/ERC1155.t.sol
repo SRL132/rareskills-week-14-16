@@ -47,6 +47,8 @@ interface ERC1155Yul {
         uint256 amount,
         bytes calldata data
     ) external;
+
+    function burn(address from, uint256 id, uint256 amount) external;
 }
 
 contract ERC1155Recipient is ERC1155TokenReceiver {
@@ -266,10 +268,13 @@ contract ERC1155Test is DSTestPlus, ERC1155TokenReceiver {
 
     function testBurn() public {
         token.mint(address(0xBEEF), 1337, 100, "");
+        erc1155Yul.mint(address(0xBEEF), 1337, 100, "");
 
         token.burn(address(0xBEEF), 1337, 70);
+        erc1155Yul.burn(address(0xBEEF), 1337, 70);
 
         assertEq(token.balanceOf(address(0xBEEF), 1337), 30);
+        assertEq(erc1155Yul.balanceOf(address(0xBEEF), 1337), 30);
     }
 
     function testBatchBurn() public {
