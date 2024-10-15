@@ -26,7 +26,21 @@ object "ERC1155" {
     }
     object "Runtime" {
         code {
+            /*
+         * slot0: owner
+         * slot1: uriLen
+         * slot (keccak256(urlLen) + i): uri value
+         * slot keccak256(id,account) : balances[id][account]
+         * slot keccak256(owner,operator) : operatorApproval[owner][operator]
+         */
             require(iszero(callvalue()))
+            //save free memory pointer
+            mstore(0x40, 0x80)
+
+
+            function uriPos() -> pos {
+                pos := 0x20
+            }
 
             switch getSelector()
 
@@ -60,8 +74,16 @@ object "ERC1155" {
                 setApprovalForAll(decodeAsAddress(0), decodeAsBool(1))
             }
 
+            case 0x01ffc9a7 /* "supportsInterface(bytes4)" */ {
+                returnBool(supportsInterface())
+            }
+
             case 0x0e89341C /* uri(uint256) */ {
                 uri(decodeAsUint(0))
+            }
+
+            case 0x02fe5305 /* setURI(string) */ {
+                setURI(decodeAsUint(0))
             }
 
             //TODO: 
@@ -91,6 +113,49 @@ object "ERC1155" {
 
   //  mapping(address => mapping(address => bool)) public isApprovedForAll;
 
+        function uriLenPos() -> p { p := 1 }
+
+        function _setURI(strOffset) {
+            /* resetting old URI slots to zero */
+            let oldStrLen := sload(uriLenPos())
+            mstore(0x00, oldStrLen)
+            let oldStrFirstSlot := keccak256(0x00, 0x20)
+
+            if oldStrLen {
+                // reset old uri slot variables to zero
+                let bound := div(oldStrLen, 0x20)
+
+                if mod(oldStrLen, 0x20) {
+                    bound := add(bound, 1)
+                }
+
+                for { let i := 0 } lt(i, bound) { i := add(i, 1)}
+                {
+                    sstore(add(oldStrFirstSlot, i), 0)
+                }
+            }
+
+            /* setting new URI */
+            let strLen := decodeAsArrayLen(strOffset)
+
+            sstore(uriLenPos(), strLen) // store length of uri
+
+            let strFirstPtr := add(strOffset, 0x24)
+
+            mstore(0x00, strLen)
+            let strFirstSlot := keccak256(0x00, 0x20)
+
+            let bound := div(strLen, 0x20)
+            if mod(strLen, 0x20) {
+                bound := add(bound, 1)
+            }
+
+            for { let i := 0 } lt(i, bound) { i := add(i, 1) }
+            {
+                let str := calldataload(add(strFirstPtr, mul(0x20, i)))
+                sstore(add(strFirstSlot, i), str)
+            }
+        }
 
         function accountToStorageOffset(account, id) -> offset {
             mstore(0, id)
@@ -116,6 +181,33 @@ object "ERC1155" {
             offset := keccak256(0, 0x40)
         }
 
+        function uri(id) {
+            let oldMptr := mload(0x40)
+            let mptr := oldMptr
+
+            mstore(mptr, 0x20)
+            mptr := add(mptr, 0x20)
+
+            let uriLen := sload(uriLenPos())
+            mstore(mptr, uriLen)
+            mptr := add(mptr, 0x20)
+
+            let bound := div(uriLen, 0x20)
+            if mod(bound, 0x20) {
+                bound := add(bound, 1)
+            }
+
+            mstore(0x00, uriLen)
+            let firstSlot := keccak256(0x00, 0x20)
+
+            for { let i := 0 } lt(i, bound) { i := add(i, 1) } {
+                let str := sload(add(firstSlot, i))
+                mstore(mptr, str)
+                mptr := add(mptr, 0x20)
+            }
+
+            return(oldMptr, sub(mptr, oldMptr))
+        }
         /* -------- external functions ---------- */
 
 //example cast abi-encode "safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)" 
@@ -243,10 +335,19 @@ object "ERC1155" {
         function isApprovedForAll(owner, operator) -> approved {
             approved := sload(accountToApprovalStorageOffset(owner, operator))
         }
+        function supportsInterface() -> ret {
+            let interfaceId := calldataload(0x04)
 
-        function uri(id) {
+            let IERC1155InterfaceId := 0xd9b67a2600000000000000000000000000000000000000000000000000000000
+            let IERC1155MetdataURIInterfaceId := 0xd9b67a2600000000000000000000000000000000000000000000000000000000
+            let IERC165InterfaceId := 0x01ffc9a700000000000000000000000000000000000000000000000000000000
+
+            ret := or(eq(interfaceId, IERC1155InterfaceId), or(eq(interfaceId, IERC1155MetdataURIInterfaceId), eq(interfaceId, IERC165InterfaceId)))
         }
 
+        function setURI(strOffset) {
+            _setURI(strOffset)
+        }
 //address to, uint256[] calldata ids, uint256[] calldata amounts,
 //            bytes calldata data
         function batchMint() {
@@ -405,6 +506,11 @@ object "ERC1155" {
         }
 
         function returnUint(v) {
+            mstore(0, v)
+            return(0, 0x20)
+        }
+
+        function returnBool(v) {
             mstore(0, v)
             return(0, 0x20)
         }
