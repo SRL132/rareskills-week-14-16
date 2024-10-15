@@ -34,8 +34,6 @@ object "ERC1155" {
          * slot keccak256(owner,operator) : operatorApproval[owner][operator]
          */
             require(iszero(callvalue()))
-            //save free memory pointer
-            mstore(0x40, 0x80)
 
             switch getSelector()
 
@@ -204,28 +202,6 @@ object "ERC1155" {
             return(oldMptr, sub(mptr, oldMptr))
         }
         /* -------- external functions ---------- */
-
-//example cast abi-encode "safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)" 
-//0x000000000000000000000000000000000000ABCD 0x0000000000000000000000000000000000001234 "[1337, 1338, 1339, 1340]" "[100, 200, 300, 400]" 0x
-
-//0x000000000000000000000000000000000000000000000000000000000000abcd —>FROM
-//0000000000000000000000000000000000000000000000000000000000001234 —>TO
-//00000000000000000000000000000000000000000000000000000000000000a0 —>160 idsOffset
-//0000000000000000000000000000000000000000000000000000000000000140 —>320 amountsOffset
-//00000000000000000000000000000000000000000000000000000000000001e0 —>480 dataOffset
-
-//0000000000000000000000000000000000000000000000000000000000000004 —>4
-//000000000000000000000000000000000000000000000000000000000000539 —>1337
-//000000000000000000000000000000000000000000000000000000000000053a —>1338
-//000000000000000000000000000000000000000000000000000000000000053b —>1339
-//000000000000000000000000000000000000000000000000000000000000053c —>1340
-
-//0000000000000000000000000000000000000000000000000000000000000004 —> 4
-//0000000000000000000000000000000000000000000000000000000000000064 —>100
-//00000000000000000000000000000000000000000000000000000000000000c8 —>200
-//000000000000000000000000000000000000000000000000000000000000012c —>300
-//0000000000000000000000000000000000000000000000000000000000000190 —>400
-//0000000000000000000000000000000000000000000000000000000000000000 —>DATA
         function safeBatchTransferFrom(from, to, idsOffset, amountsOffset, dataOffset) {
             _safeBatchTransferFrom(from, to, idsOffset, amountsOffset, dataOffset)
         }
@@ -421,8 +397,6 @@ object "ERC1155" {
             _subBalance(from, id, amount)
         }
 
-        /* -------- internal functions ---------- */
-
          /* -------- helper functions ---------- */
 
          function require(condition) {
@@ -432,7 +406,8 @@ object "ERC1155" {
         function requireNoRevert(condition) ->res {
             res := iszero(condition)
         }
-
+        
+         /* ----------  calldata decoding ---------- */
         function decodeAsAddress(offset) -> v {
             // Decode the value as a uint256
             v := decodeAsUint(offset)
@@ -476,6 +451,22 @@ object "ERC1155" {
         function decodeAsArrayLen(offset) -> len {
             len := calldataload(add(offset, 4))
         }
+        
+
+         /* ----------  calldata encoding ---------- */
+             function returnUint(v) {
+                mstore(0, v)
+                return(0, 0x20)
+            }
+    
+            function returnBool(v) {
+                mstore(0, v)
+                return(0, 0x20)
+            }
+
+            /* ----------  events ---------- */
+
+            /* ----------  utils ---------- */  
 
         function getSelector() -> sel {
             // Shift right by 224 bits (32 - 4 bytes) to get the first 4 bytes
@@ -500,15 +491,6 @@ object "ERC1155" {
             if or(lt(r, a), lt(r, b)) { revert(0, 0) }
         }
 
-        function returnUint(v) {
-            mstore(0, v)
-            return(0, 0x20)
-        }
-
-        function returnBool(v) {
-            mstore(0, v)
-            return(0, 0x20)
-        }
 
         function copyBytesToMemory(mptr, dataOffset) -> newMptr {
             let dataLenOffset := add(dataOffset, 4)
@@ -523,6 +505,8 @@ object "ERC1155" {
 
             newMptr := add(mptr, totalLen)
         }
+
+        /*Errors */
 
     }
     }
