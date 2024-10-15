@@ -37,11 +37,6 @@ object "ERC1155" {
             //save free memory pointer
             mstore(0x40, 0x80)
 
-
-            function uriPos() -> pos {
-                pos := 0x20
-            }
-
             switch getSelector()
 
             case 0x00fdd58e /* balanceOf(address,uint256) */ {
