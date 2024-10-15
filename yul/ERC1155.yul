@@ -65,8 +65,6 @@ object "ERC1155" {
             }
 
             //TODO: 
-            //setApprovalForAll
-            //isApprovedForAll
             //events
             //custom errors
 
