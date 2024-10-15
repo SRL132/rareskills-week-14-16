@@ -13,8 +13,8 @@ Functions
 - [x]  **`function** safeBatchTransferFrom(**address** _from, **address** _to, **uint256**[] **calldata** _ids, **uint256**[] **calldata** _values, **bytes** **calldata** _data) **external**;`
 - [x]  **`function** balanceOf(**address** _owner, **uint256** _id) **external** **view** **returns** (**uint256**);`
 - [x]  **`function** balanceOfBatch(**address**[] **calldata** _owners, **uint256**[] **calldata** _ids) **external** **view** **returns** (**uint256**[] **memory**);`
-- [ ]  **`function** setApprovalForAll(**address** _operator, **bool** _approved) **external**;`
-- [ ]  **`function** isApprovedForAll(**address** _owner, **address** _operator) **external** **view** **returns** (**bool**);`
+- [x]  **`function** setApprovalForAll(**address** _operator, **bool** _approved) **external**;`
+- [x]  **`function** isApprovedForAll(**address** _owner, **address** _operator) **external** **view** **returns** (**bool**);`
 
 https://eips.ethereum.org/EIPS/eip-1155
 */
@@ -48,6 +48,22 @@ object "ERC1155" {
                 safeTransferFrom(decodeAsAddress(0), decodeAsAddress(1), decodeAsUint(2), decodeAsUint(3), decodeAsUint(4))
             }
 
+            case 0xe985e9c5 /* "isApprovedForAll(address,address)" */ {
+                returnUint(isApprovedForAll(decodeAsAddress(0), decodeAsAddress(1)))
+            }
+
+            case 0x2eb2c2d6 /* "safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)" */ {
+                safeBatchTransferFrom(decodeAsAddress(0), decodeAsAddress(1), decodeAsUint(2), decodeAsUint(3), decodeAsUint(4))
+            }
+
+            case 0xa22cb465 /* "setApprovalForAll(address,bool)" */ {
+                setApprovalForAll(decodeAsAddress(0), decodeAsBool(1))
+            }
+
+            case 0x0e89341C /* uri(uint256) */ {
+                uri(decodeAsUint(0))
+            }
+
             //TODO: 
             //setApprovalForAll
             //isApprovedForAll
@@ -62,10 +78,6 @@ object "ERC1155" {
                 burn(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2))
             }
 
-            case 0x2eb2c2d6 /* "safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)" */ {
-                safeBatchTransferFrom(decodeAsAddress(0), decodeAsAddress(1), decodeAsUint(2), decodeAsUint(3), decodeAsUint(4))
-            }
-
             case 0xf6eb127a /* batchBurn(address,uint256[],uint256[]) */ {    
                 batchBurn(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2))
             }
@@ -77,7 +89,7 @@ object "ERC1155" {
 
         /* -------- storage layout ---------- */
 
-//    mapping(address owner => mapping(uint256 => uint256)) public balanceOf;
+  //  mapping(address owner => mapping(uint256 => uint256)) public balanceOf;
 
   //  mapping(address => mapping(address => bool)) public isApprovedForAll;
 
@@ -85,6 +97,12 @@ object "ERC1155" {
         function accountToStorageOffset(account, id) -> offset {
             mstore(0, id)
             mstore(0x20, account)
+            offset := keccak256(0, 0x40)
+        }
+
+        function accountToApprovalStorageOffset(owner, operator) -> offset {
+            mstore(0, owner)
+            mstore(0x20, operator)
             offset := keccak256(0, 0x40)
         }
 
@@ -191,6 +209,10 @@ object "ERC1155" {
             return(0x80, sub(mptr, 0x80))
         }
 
+        function setApprovalForAll(operator, approved) {
+            sstore(accountToApprovalStorageOffset(caller(), operator), approved)
+        }
+
         function _doSafeBatchTransferAcceptanceCheck(operator, from, to, id, amount, dataOffset){
           if requireNoRevert(gt(extcodesize(to), 0)) {
                 let selector := 0xf23a6e6100000000000000000000000000000000000000000000000000000000 // onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)
@@ -218,6 +240,13 @@ object "ERC1155" {
                     revert(0, 0)
                 }
             }
+        }
+
+        function isApprovedForAll(owner, operator) -> approved {
+            approved := sload(accountToApprovalStorageOffset(owner, operator))
+        }
+
+        function uri(id) {
         }
 
 //address to, uint256[] calldata ids, uint256[] calldata amounts,
@@ -333,6 +362,21 @@ object "ERC1155" {
 
             // Load the 32-byte value from calldata at the calculated position
             v := calldataload(pos)
+        }
+
+        function decodeAsBool(offset) -> v {
+            let val := decodeAsUint(offset)
+            if eq(val, 0x0000000000000000000000000000000000000000000000000000000000000000) {
+                v := val
+                leave
+            }
+
+            if eq(val, 0x0000000000000000000000000000000000000000000000000000000000000001) {
+                v := val
+                leave
+            }
+
+            revert(0, 0)
         }
 
         function decodeAsArrayLen(offset) -> len {
