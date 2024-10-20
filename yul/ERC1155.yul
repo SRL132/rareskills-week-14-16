@@ -209,7 +209,14 @@ object "ERC1155" {
 
         function safeTransferFrom(from, to, id, amount, dataOffset) {
             let fromBalance:= sload(balanceStorageOffset(id, from))
-            require(lt(amount, fromBalance))
+            
+            if requireNoRevert(to) {
+                revertTransferToTheZeroAddress()
+            }
+
+            if requireNoRevert(lt(amount, fromBalance)){
+            revertInsufficientBalanceForTransfer()
+            }
             _addBalance(to, id, amount)
             _subBalance(from, id, amount)
 
@@ -220,11 +227,14 @@ object "ERC1155" {
             let idsLen := decodeAsArrayLen(idsOffset)
             let amountsLen := decodeAsArrayLen(amountsOffset)
 
-            require(from)
+            if requireNoRevert(eq(idsLen, amountsLen)) {
+                revertIdsAndAmountsLengthMismatch()
+            }
 
-            require(to)
+            if requireNoRevert(to) {
+                revertTransferToTheZeroAddress()
+            }
 
-            require(eq(idsLen, amountsLen))
 
             let firstIdPtr := add(idsOffset, 0x24)
             let firstAmountPtr := add(amountsOffset, 0x24)
@@ -249,7 +259,10 @@ object "ERC1155" {
             let accountsLen := decodeAsArrayLen(accountsOffset)
             let idLen := decodeAsArrayLen(idsOffset)
 
-            require(eq(accountsLen, idLen))
+            if requireNoRevert(eq(accountsLen, idLen))
+            {   
+                revertAccountsAndIdsLengthMismatch()
+            }
 
             let mptr := 0x80
             mstore(mptr, 0x20) // array offset
@@ -275,6 +288,7 @@ object "ERC1155" {
 
         function setApprovalForAll(operator, approved) {
             sstore(accountToApprovalStorageOffset(caller(), operator), approved)
+            emitApprovalForAll(caller(), operator, approved)
         }
 
         function _doSafeBatchTransferAcceptanceCheck(operator, from, to, id, amount, dataOffset){
@@ -296,12 +310,12 @@ object "ERC1155" {
                         returndatacopy(0x00, 0, returndatasize())
                         revert(0x00, returndatasize())
                     }
-                   revert(0, 0)
+                    revertTransferToNonERC1155ReceiverImplementer()
                 }
 
                 // reverts if it does not return proper selector (0xf23a6e61)
                 if requireNoRevert(eq(selector, mload(0))) {
-                    revert(0, 0)
+                    revertERC1155ReceiverRejectedTokens()
                 }
             }
         }
@@ -328,54 +342,52 @@ object "ERC1155" {
           //      uint256 idsLength = ids.length; // Saves MLOADs.
          //   require(idsLength == amounts.length, "LENGTH_MISMATCH");
          let to := decodeAsAddress(0)
-    // 0x1fe457d7                                                         - function signature
-    //  0000000000000000000000000000000000000000000000000000000000000020 - offset of [1,2,3]
-    //  0000000000000000000000000000000000000000000000000000000000000003 - count for [1,2,3]
-    //  0000000000000000000000000000000000000000000000000000000000000001 - encoding of 1
-    //  0000000000000000000000000000000000000000000000000000000000000002 - encoding of 2
-    //  0000000000000000000000000000000000000000000000000000000000000003 - encoding of 3
-         let idsOffset := add(decodeAsUint(1), 0x04)
+
+         if requireNoRevert(to) {
+             revertMintToTheZeroAddress()
+         }
+
+         let idsOffset := decodeAsUint(1)
          
-         let idsLength := calldataload(idsOffset)
+         let idsLength := decodeAsArrayLen(idsOffset)
 
-         let amountsOffset := add(decodeAsUint(2), 0x04)
+         let amountsOffset := decodeAsUint(2)
 
-         let amountsLength:= calldataload(amountsOffset)
+         let amountsLength:= decodeAsArrayLen(amountsOffset)
 
-         let dataOffset :=  add(decodeAsUint(3), 0x04)
-            //TODO: add custom error
-         if iszero(eq(idsLength, amountsLength)) {
-            //ERC1155_LENGTH_MISMATCH
-               // mstore(0x00, 0x3b3b57de)
-                revert(0, 0) // Revert with the error selector
-        }
+         let dataOffset :=  decodeAsUint(3)
 
-        //    ids and amounts layout
-        //    offset
-         //   length
-      //      first item
-     //       second item
-     //       third item
-            let i :=0
-            for { } lt(i, idsLength) { i := add(i, 1) } {
-                // Load the id and amount
-                let id  := calldataload(add(idsOffset, mul(i, 0x20)))
-                let amount := calldataload(add(amountsOffset, mul(i, 0x20)))
-
-                // Calculate the storage slot for balanceOf[to][id]
-                let balanceSlot := accountToStorageOffset(to, id)
-
-                // Load the current balance, add the amount, and store it back
-                let currentBalance := sload(balanceSlot)
-                sstore(balanceSlot,  amount)
+            if requireNoRevert(eq(idsLength, amountsLength)) {
+                revertIdsAndAmountsLengthMismatch()
             }
+
+            let idsStartPtr := add(idsOffset, 0x24)
+            let amountsStartPtr := add(amountsOffset, 0x24)
+ 
+           
+            for { let i := 0 } lt(i, idsLength) { i := add(i, 1)}
+            {
+                let id := calldataload(add(idsStartPtr, mul(0x20, i)))
+                let amount := calldataload(add(amountsStartPtr, mul(0x20, i)))
+                _addBalance(to, id, amount)
+            }
+
+            emitTransferBatch(caller(), 0, to, idsOffset, amountsOffset)
+
+        //    _doSafeBatchTransferAcceptanceCheck(caller(), 0, to, idsOffset, amountsOffset, dataOffset)
         }
 
         function batchBurn(from, idsOffset, amountsOffset){
+            if requireNoRevert(from) {
+                revertBurnFromTheZeroAddress()
+            }
             let idsLength := decodeAsArrayLen(idsOffset)
             let amountsLength := decodeAsArrayLen(amountsOffset)
 
-           require(eq(idsLength, amountsLength))
+            if requireNoRevert(eq(idsLength, amountsLength)) {
+                revertIdsAndAmountsLengthMismatch()
+            }
+
 
             let firstIdPtr := add(idsOffset, 0x24)
             let firstAmountPtr := add(amountsOffset, 0x24)
@@ -389,6 +401,8 @@ object "ERC1155" {
 
                 _subBalance(from, id, amount)
             }
+
+            emitTransferBatch(caller(), from, 0, idsOffset, amountsOffset)
         }
 
         function mint(to, id, amount, dataOffset){
@@ -396,7 +410,18 @@ object "ERC1155" {
         }
 
         function burn(from, id, amount){
+            if requireNoRevert(from) {
+                revertBurnFromTheZeroAddress()
+            }
+
+            let fromBalance := sload(balanceStorageOffset(id, from))
+
+            if requireNoRevert(gte(fromBalance, balanceOf(from, amount))) {
+                revertBurnAmountExceedsBalance()
+            }
             _subBalance(from, id, amount)
+
+            emitTransferSingle(caller(), from, 0, id, amount)
         }
 
          /* -------- helper functions ---------- */
@@ -521,6 +546,10 @@ object "ERC1155" {
             sel := shr(224, calldataload(0))
         }
 
+        function gte(a, b) -> r {
+            r := iszero(lt(a, b))
+        }
+
         function _addBalance(to, id, amount) {
             let offset := balanceStorageOffset(id, to)
             let prev := sload(offset)
@@ -640,7 +669,7 @@ object "ERC1155" {
                 revert(mptr, 0x04)
             }
 
-            function revertBurnFromTheZeroAddrss() {
+            function revertBurnFromTheZeroAddress() {
                 /* "ERC1155_BURN_FROM_ZERO:ADDRESS() */
                 let mptr := 0x00
                 mstore(mptr, 0x45d40ad5)
