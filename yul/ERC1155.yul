@@ -333,7 +333,6 @@ object "ERC1155" {
     //  0000000000000000000000000000000000000000000000000000000000000001 - encoding of 1
     //  0000000000000000000000000000000000000000000000000000000000000002 - encoding of 2
     //  0000000000000000000000000000000000000000000000000000000000000003 - encoding of 3
-    //TODO: understand decodeAsUint
          let idsOffset := add(decodeAsUint(1), 0x04)
          
          let idsLength := calldataload(idsOffset)
@@ -501,6 +500,16 @@ object "ERC1155" {
                 let signatureHash := 0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31
                 mstore(0x00, approved)
                 log3(0x00, 0x20, signatureHash, owner, operator)
+            }
+
+           function emitURI (value, id) {
+            //   event URI(string value, uint256 indexed id);
+                let signatureHash := 0x7e15c9e84aa0e17b53edaaf59cf4a1ce70dc34cdadd644913e94732dd1c1c150
+                let freeMemoryPointer := mload(0x40)
+                //infer string length
+                
+                mstore(freeMemoryPointer, value)
+                log2(0x00, 0x20, signatureHash, id)
             }
 
             /* ----------  utils ---------- */  
